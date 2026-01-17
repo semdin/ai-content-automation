@@ -17,6 +17,7 @@ import { uploadImage, deleteImage } from "@/modules/upload/services";
 import type { MannequinWithBrands } from "@/modules/mannequins/types";
 import type { BrandListItem } from "@/modules/brands/types";
 import { Trash2, User, ImagePlus, X, Star, Plus, Tags } from "lucide-react";
+import { toast } from "sonner";
 
 interface MannequinDetailProps {
     mannequin: MannequinWithBrands;
@@ -44,71 +45,103 @@ export function MannequinDetail({ mannequin, allBrands }: MannequinDetailProps) 
 
         setIsUploading(true);
 
-        for (const file of Array.from(files)) {
-            const reader = new FileReader();
-            reader.onload = async () => {
-                try {
-                    const result = await uploadImage(reader.result as string, {
-                        folder: "mannequins",
-                    });
-                    await addMannequinPhoto(mannequin.id, {
-                        url: result.url,
-                        publicId: result.publicId,
-                        width: result.width,
-                        height: result.height,
-                        isPrimary: mannequin.photos.length === 0,
-                    });
-                    router.refresh();
-                } catch (error) {
-                    console.error("Upload failed:", error);
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        setIsUploading(false);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
+        try {
+            for (const file of Array.from(files)) {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    try {
+                        const result = await uploadImage(reader.result as string, {
+                            folder: "mannequins",
+                        });
+                        await addMannequinPhoto(mannequin.id, {
+                            url: result.url,
+                            publicId: result.publicId,
+                            width: result.width,
+                            height: result.height,
+                            isPrimary: mannequin.photos.length === 0,
+                        });
+                        toast.success("Fotoğraf yüklendi");
+                        router.refresh();
+                    } catch (error) {
+                        console.error("Upload failed:", error);
+                        toast.error("Fotoğraf yüklenirken hata oluştu");
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
         }
     };
 
     const handleDeletePhoto = async (photoId: string, publicId?: string | null) => {
         if (!confirm("Bu fotoğrafı silmek istediğinize emin misiniz?")) return;
 
-        if (publicId) {
-            await deleteImage(publicId);
+        try {
+            if (publicId) {
+                await deleteImage(publicId);
+            }
+            await deleteMannequinPhoto(photoId);
+            toast.success("Fotoğraf silindi");
+            router.refresh();
+        } catch (error) {
+            console.error("Error:", error);
+            toast.error("Fotoğraf silinirken hata oluştu");
         }
-        await deleteMannequinPhoto(photoId);
-        router.refresh();
     };
 
     const handleSetPrimary = async (photoId: string) => {
-        await setPrimaryPhoto(mannequin.id, photoId);
-        router.refresh();
+        try {
+            await setPrimaryPhoto(mannequin.id, photoId);
+            toast.success("Ana fotoğraf güncellendi");
+            router.refresh();
+        } catch (error) {
+            console.error("Error:", error);
+            toast.error("Ana fotoğraf güncellenirken hata oluştu");
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        await updateMannequin(mannequin.id, {
-            name: formData.name,
-            birthYear: formData.birthYear ? parseInt(formData.birthYear) : undefined,
-            heightCm: formData.heightCm ? parseInt(formData.heightCm) : undefined,
-        });
-        await updateMannequinBrands(mannequin.id, selectedBrands);
-        setIsLoading(false);
-        router.refresh();
+
+        try {
+            await updateMannequin(mannequin.id, {
+                name: formData.name,
+                birthYear: formData.birthYear ? parseInt(formData.birthYear) : undefined,
+                heightCm: formData.heightCm ? parseInt(formData.heightCm) : undefined,
+            });
+            await updateMannequinBrands(mannequin.id, selectedBrands);
+
+            toast.success("Manken başarıyla güncellendi");
+            router.refresh();
+        } catch (error) {
+            console.error("Error:", error);
+            toast.error("Manken güncellenirken hata oluştu");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleDelete = async () => {
         if (!confirm("Bu mankeni silmek istediğinize emin misiniz?")) return;
-        for (const photo of mannequin.photos) {
-            if (photo.publicId) {
-                await deleteImage(photo.publicId);
+
+        try {
+            for (const photo of mannequin.photos) {
+                if (photo.publicId) {
+                    await deleteImage(photo.publicId);
+                }
             }
+            await deleteMannequin(mannequin.id);
+            toast.success("Manken başarıyla silindi");
+            router.push("/dashboard/mannequins");
+        } catch (error) {
+            console.error("Error:", error);
+            toast.error("Manken silinirken hata oluştu");
         }
-        await deleteMannequin(mannequin.id);
-        router.push("/dashboard/mannequins");
     };
 
     const addBrand = (id: string) => {

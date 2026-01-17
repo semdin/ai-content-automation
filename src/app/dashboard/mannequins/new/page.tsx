@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createMannequin, addMannequinPhoto } from "@/modules/mannequins/services";
 import { uploadImage } from "@/modules/upload/services";
-import { Upload, X, ImagePlus } from "lucide-react";
+import { X, ImagePlus } from "lucide-react";
+import { toast } from "sonner";
 
 type PhotoPreview = {
     id: string;
@@ -40,7 +41,6 @@ export default function NewMannequinPage() {
             reader.readAsDataURL(file);
         });
 
-        // Reset input
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
@@ -55,14 +55,12 @@ export default function NewMannequinPage() {
         setIsLoading(true);
 
         try {
-            // Create mannequin first
             const mannequin = await createMannequin({
                 name: formData.name,
                 birthYear: formData.birthYear ? parseInt(formData.birthYear) : undefined,
                 heightCm: formData.heightCm ? parseInt(formData.heightCm) : undefined,
             });
 
-            // Upload photos (original quality - no transformation)
             for (let i = 0; i < photos.length; i++) {
                 const photo = photos[i];
                 const result = await uploadImage(photo.dataUrl, {
@@ -73,13 +71,15 @@ export default function NewMannequinPage() {
                     publicId: result.publicId,
                     width: result.width,
                     height: result.height,
-                    isPrimary: i === 0, // First photo is primary
+                    isPrimary: i === 0,
                 });
             }
 
+            toast.success("Manken başarıyla oluşturuldu");
             router.push("/dashboard/mannequins");
         } catch (error) {
             console.error("Error:", error);
+            toast.error("Manken oluşturulurken bir hata oluştu");
             setIsLoading(false);
         }
     };
@@ -173,14 +173,7 @@ export default function NewMannequinPage() {
 
                         <div className="flex gap-2">
                             <Button type="submit" disabled={isLoading}>
-                                {isLoading ? (
-                                    <>
-                                        <Upload className="w-4 h-4 mr-2 animate-spin" />
-                                        Yükleniyor...
-                                    </>
-                                ) : (
-                                    "Kaydet"
-                                )}
+                                {isLoading ? "Kaydediliyor..." : "Kaydet"}
                             </Button>
                             <Button type="button" variant="outline" onClick={() => router.back()}>
                                 İptal

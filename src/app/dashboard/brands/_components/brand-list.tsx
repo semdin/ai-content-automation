@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tags } from "lucide-react";
 import Link from "next/link";
 import { useActiveBrand } from "@/contexts/active-brand-context";
 import type { Brand } from "@/modules/brands/types";
@@ -38,11 +39,22 @@ export function BrandList({ brands }: BrandListProps) {
                         className={`hover:border-primary transition-colors cursor-pointer ${brand.id === activeBrandId ? "border-primary" : ""
                             }`}
                     >
-                        <CardHeader className="flex flex-row items-start justify-between">
+                        <CardHeader className="flex flex-row items-center gap-4">
+                            {brand.logoUrl ? (
+                                <img
+                                    src={brand.logoUrl}
+                                    alt={brand.name}
+                                    className="w-12 h-12 rounded-lg object-cover"
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                                    <Tags className="w-6 h-6 text-muted-foreground" />
+                                </div>
+                            )}
                             <div>
                                 <CardTitle className="text-lg">{brand.name}</CardTitle>
                                 {brand.id === activeBrandId && (
-                                    <Badge className="mt-2">Aktif</Badge>
+                                    <Badge className="mt-1">Aktif</Badge>
                                 )}
                             </div>
                         </CardHeader>
