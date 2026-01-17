@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Check, ChevronsUpDown, Tags, Plus } from "lucide-react";
 import {
     DropdownMenu,
@@ -15,6 +15,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
+import { useActiveBrand } from "@/contexts/active-brand-context";
 
 interface Brand {
     id: string;
@@ -25,30 +26,17 @@ interface BrandSwitcherProps {
     brands: Brand[];
 }
 
-const BRAND_COOKIE_NAME = "current_brand";
-
 export function BrandSwitcher({ brands }: BrandSwitcherProps) {
-    const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+    const { activeBrandId, setActiveBrand } = useActiveBrand();
 
-    // Load from cookie on mount
+    // Auto-select first brand if none selected
     useEffect(() => {
-        const savedBrandId = document.cookie
-            .split("; ")
-            .find((row) => row.startsWith(BRAND_COOKIE_NAME))
-            ?.split("=")[1];
-
-        if (savedBrandId) {
-            const brand = brands.find((b) => b.id === savedBrandId);
-            if (brand) setSelectedBrand(brand);
-        } else if (brands.length > 0) {
-            setSelectedBrand(brands[0]);
+        if (!activeBrandId && brands.length > 0) {
+            setActiveBrand(brands[0].id);
         }
-    }, [brands]);
+    }, [activeBrandId, brands, setActiveBrand]);
 
-    const handleSelect = (brand: Brand) => {
-        setSelectedBrand(brand);
-        document.cookie = `${BRAND_COOKIE_NAME}=${brand.id}; path=/; max-age=${60 * 60 * 24 * 365}`;
-    };
+    const selectedBrand = brands.find((b) => b.id === activeBrandId);
 
     if (brands.length === 0) {
         return (
@@ -102,10 +90,10 @@ export function BrandSwitcher({ brands }: BrandSwitcherProps) {
                         {brands.map((brand) => (
                             <DropdownMenuItem
                                 key={brand.id}
-                                onSelect={() => handleSelect(brand)}
+                                onSelect={() => setActiveBrand(brand.id)}
                             >
                                 {brand.name}
-                                {brand.id === selectedBrand?.id && (
+                                {brand.id === activeBrandId && (
                                     <Check className="ml-auto size-4" />
                                 )}
                             </DropdownMenuItem>

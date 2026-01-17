@@ -1,8 +1,8 @@
 import { getBrands } from "@/modules/brands/services";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { BrandList } from "./_components/brand-list";
 
 export default async function BrandsPage() {
     const brands = await getBrands();
@@ -19,32 +19,7 @@ export default async function BrandsPage() {
                 </Button>
             </div>
 
-            {brands.length === 0 ? (
-                <Card>
-                    <CardContent className="py-8 text-center text-muted-foreground">
-                        Henüz marka eklemediniz.
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {brands.map((brand) => (
-                        <Link key={brand.id} href={`/dashboard/brands/${brand.id}`}>
-                            <Card className="hover:border-primary transition-colors cursor-pointer">
-                                <CardHeader>
-                                    <CardTitle className="text-lg">{brand.name}</CardTitle>
-                                </CardHeader>
-                                {brand.description && (
-                                    <CardContent>
-                                        <p className="text-sm text-muted-foreground line-clamp-2">
-                                            {brand.description}
-                                        </p>
-                                    </CardContent>
-                                )}
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
-            )}
+            <BrandList brands={brands} />
         </div>
     );
 }

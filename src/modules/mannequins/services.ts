@@ -21,9 +21,12 @@ export async function getMannequins() {
         .from(mannequins)
         .where(eq(mannequins.userId, user.id));
 
-    // Get primary photos for each mannequin
     const mannequinIds = mannequinList.map((m) => m.id);
+
+    // Get primary photos
     let photos: { mannequinId: string; url: string; isPrimary: boolean | null }[] = [];
+    // Get brand associations
+    let associations: { mannequinId: string; brandId: string }[] = [];
 
     if (mannequinIds.length > 0) {
         photos = await db
@@ -34,14 +37,26 @@ export async function getMannequins() {
             })
             .from(mannequinPhotos)
             .where(inArray(mannequinPhotos.mannequinId, mannequinIds));
+
+        associations = await db
+            .select({
+                mannequinId: brandMannequins.mannequinId,
+                brandId: brandMannequins.brandId,
+            })
+            .from(brandMannequins)
+            .where(inArray(brandMannequins.mannequinId, mannequinIds));
     }
 
     return mannequinList.map((m) => {
-        const mannequinPhotos = photos.filter((p) => p.mannequinId === m.id);
-        const primaryPhoto = mannequinPhotos.find((p) => p.isPrimary) || mannequinPhotos[0];
+        const mPhotos = photos.filter((p) => p.mannequinId === m.id);
+        const primaryPhoto = mPhotos.find((p) => p.isPrimary) || mPhotos[0];
+        const brandIds = associations
+            .filter((a) => a.mannequinId === m.id)
+            .map((a) => a.brandId);
         return {
             ...m,
             primaryPhotoUrl: primaryPhoto?.url || null,
+            brandIds,
         };
     });
 }

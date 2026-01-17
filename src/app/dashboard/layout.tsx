@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { getBrandsForSwitcher } from "@/modules/brands/services";
+import { ActiveBrandProvider } from "@/contexts/active-brand-context";
 
 export default async function DashboardLayout({
     children,
@@ -20,8 +21,10 @@ export default async function DashboardLayout({
     const userBrands = await getBrandsForSwitcher();
 
     return (
-        <DashboardShell user={session.user} brands={userBrands}>
-            {children}
-        </DashboardShell>
+        <ActiveBrandProvider>
+            <DashboardShell user={session.user} brands={userBrands}>
+                {children}
+            </DashboardShell>
+        </ActiveBrandProvider>
     );
 }

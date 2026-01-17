@@ -4,7 +4,7 @@
  */
 
 import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 
 /**
  * Get current authenticated user or throw error
@@ -28,4 +28,12 @@ export async function getSession() {
 export async function isAuthenticated() {
     const session = await auth.api.getSession({ headers: await headers() });
     return !!session;
+}
+
+/**
+ * Get current active brand ID from cookie
+ */
+export async function getCurrentBrandId(): Promise<string | null> {
+    const cookieStore = await cookies();
+    return cookieStore.get("current_brand")?.value || null;
 }
