@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:18.1
     container_name: ai-content-db
-    restart: unless-stopped
+    restart: "no"
     environment:
       POSTGRES_USER: ai_content_user
       POSTGRES_PASSWORD: ai_content_pass_2026
