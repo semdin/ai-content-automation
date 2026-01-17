@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Home, ImageIcon, FolderOpen, Settings, LogOut, Tags } from "lucide-react";
+import { Home, ImageIcon, FolderOpen, Settings, LogOut, Tags, Users } from "lucide-react";
 import Link from "next/link";
 import { BrandSwitcher } from "./brand-switcher";
 
@@ -35,6 +35,7 @@ interface Brand {
 const menuItems = [
     { title: "Ana Sayfa", icon: Home, href: "/dashboard" },
     { title: "Markalar", icon: Tags, href: "/dashboard/brands" },
+    { title: "Mankenler", icon: Users, href: "/dashboard/mannequins" },
     { title: "İçerikler", icon: ImageIcon, href: "/dashboard/content" },
     { title: "Kampanyalar", icon: FolderOpen, href: "/dashboard/campaigns" },
     { title: "Ayarlar", icon: Settings, href: "/dashboard/settings" },

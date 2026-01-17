@@ -6,9 +6,9 @@
  */
 
 import { db } from "@/db";
-import { brands } from "@/db/schema";
+import { brands, brandMannequins, mannequins, mannequinPhotos } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import type { CreateBrandInput, UpdateBrandInput, BrandListItem } from "./types";
 
@@ -34,6 +34,54 @@ export async function getBrand(id: string) {
         .from(brands)
         .where(and(eq(brands.id, id), eq(brands.userId, user.id)));
     return brand;
+}
+
+export async function getBrandWithMannequins(id: string) {
+    const user = await getCurrentUser();
+    const [brand] = await db
+        .select()
+        .from(brands)
+        .where(and(eq(brands.id, id), eq(brands.userId, user.id)));
+
+    if (!brand) return null;
+
+    // Get associated mannequins
+    const associations = await db
+        .select({ mannequinId: brandMannequins.mannequinId })
+        .from(brandMannequins)
+        .where(eq(brandMannequins.brandId, id));
+
+    const mannequinIds = associations.map((a) => a.mannequinId);
+
+    let brandMannequinsList: { id: string; name: string; primaryPhotoUrl: string | null }[] = [];
+    if (mannequinIds.length > 0) {
+        const mannequinData = await db
+            .select({ id: mannequins.id, name: mannequins.name })
+            .from(mannequins)
+            .where(inArray(mannequins.id, mannequinIds));
+
+        // Get primary photos
+        const photos = await db
+            .select({
+                mannequinId: mannequinPhotos.mannequinId,
+                url: mannequinPhotos.url,
+                isPrimary: mannequinPhotos.isPrimary,
+            })
+            .from(mannequinPhotos)
+            .where(inArray(mannequinPhotos.mannequinId, mannequinIds));
+
+        brandMannequinsList = mannequinData.map((m) => {
+            const mPhotos = photos.filter((p) => p.mannequinId === m.id);
+            const primaryPhoto = mPhotos.find((p) => p.isPrimary) || mPhotos[0];
+            return {
+                id: m.id,
+                name: m.name,
+                primaryPhotoUrl: primaryPhoto?.url || null,
+            };
+        });
+    }
+
+    return { ...brand, mannequins: brandMannequinsList };
 }
 
 // ============ Mutations ============

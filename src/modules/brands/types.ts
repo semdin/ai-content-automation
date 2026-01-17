@@ -21,3 +21,7 @@ export type BrandListItem = {
     id: string;
     name: string;
 };
+
+export type BrandWithMannequins = Brand & {
+    mannequins: { id: string; name: string; primaryPhotoUrl: string | null }[];
+};
