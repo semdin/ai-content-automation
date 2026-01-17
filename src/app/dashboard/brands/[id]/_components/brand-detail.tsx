@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,9 +130,17 @@ export function BrandDetail({ brand, allMannequins }: BrandDetailProps) {
                     )}
                     <h1 className="text-2xl font-semibold">{brand.name}</h1>
                 </div>
-                <Button variant="ghost" size="icon" onClick={handleDelete}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href={`/dashboard/brands/${brand.id}/assets`}>
+                            <ImagePlus className="w-4 h-4 mr-2" />
+                            Assets
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={handleDelete}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

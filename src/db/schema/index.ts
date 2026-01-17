@@ -7,3 +7,4 @@ export * from "./test";
 export * from "./auth";
 export * from "./brands";
 export * from "./mannequins";
+export * from "./brand-assets";
