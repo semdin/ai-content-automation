@@ -17,13 +17,13 @@ export const auth = betterAuth({
         enabled: true,
     },
 
-    // Social providers (Google için sonra ekleyeceğiz)
-    // socialProviders: {
-    //   google: {
-    //     clientId: process.env.GOOGLE_CLIENT_ID!,
-    //     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    //   },
-    // },
+    // Social providers
+    socialProviders: {
+        google: {
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        },
+    },
 });
 
 // Export type for client
