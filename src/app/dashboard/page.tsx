@@ -1,9 +1,10 @@
-"use client";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-import { useSession } from "@/lib/auth-client";
-
-export default function DashboardPage() {
-    const { data: session } = useSession();
+export default async function DashboardPage() {
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    });
 
     return (
         <div className="space-y-4">
