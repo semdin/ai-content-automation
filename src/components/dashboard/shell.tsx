@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Home, ImageIcon, FolderOpen, Settings, LogOut } from "lucide-react";
+import { Home, ImageIcon, FolderOpen, Settings, LogOut, Tags } from "lucide-react";
 import Link from "next/link";
+import { BrandSwitcher } from "./brand-switcher";
 
 interface User {
     id: string;
@@ -26,8 +27,14 @@ interface User {
     image?: string | null;
 }
 
+interface Brand {
+    id: string;
+    name: string;
+}
+
 const menuItems = [
     { title: "Ana Sayfa", icon: Home, href: "/dashboard" },
+    { title: "Markalar", icon: Tags, href: "/dashboard/brands" },
     { title: "İçerikler", icon: ImageIcon, href: "/dashboard/content" },
     { title: "Kampanyalar", icon: FolderOpen, href: "/dashboard/campaigns" },
     { title: "Ayarlar", icon: Settings, href: "/dashboard/settings" },
@@ -36,9 +43,11 @@ const menuItems = [
 export function DashboardShell({
     children,
     user,
+    brands,
 }: {
     children: React.ReactNode;
     user: User;
+    brands: Brand[];
 }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -51,8 +60,8 @@ export function DashboardShell({
     return (
         <SidebarProvider>
             <Sidebar>
-                <SidebarHeader className="p-4">
-                    <span className="font-semibold">AI Content</span>
+                <SidebarHeader className="p-2">
+                    <BrandSwitcher brands={brands} />
                 </SidebarHeader>
                 <Separator />
                 <SidebarContent>

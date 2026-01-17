@@ -2,13 +2,13 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/shell";
+import { getBrandsForSwitcher } from "@/modules/brands/services";
 
 export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    // Server-side session check (secure)
     const session = await auth.api.getSession({
         headers: await headers(),
     });
@@ -17,5 +17,11 @@ export default async function DashboardLayout({
         redirect("/login");
     }
 
-    return <DashboardShell user={session.user}>{children}</DashboardShell>;
+    const userBrands = await getBrandsForSwitcher();
+
+    return (
+        <DashboardShell user={session.user} brands={userBrands}>
+            {children}
+        </DashboardShell>
+    );
 }
