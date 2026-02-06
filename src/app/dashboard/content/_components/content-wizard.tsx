@@ -5,7 +5,9 @@ import { BrandListItem } from "@/modules/brands/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ChevronRight, Loader2, Sparkles } from "lucide-react";
 
 import { BrandAssetSelector } from "./steps/brand-asset-selector";
 import { ConceptMannequinStep } from "./steps/concept-mannequin";
@@ -13,9 +15,10 @@ import { PlatformConfigStep } from "./steps/platform-config";
 import { ContentGenerationConfig } from "@/modules/content/types";
 import { FalConnectionTest } from "./fal-connection-test";
 import { toast } from "sonner";
-import { generateContentAction } from "../actions";
+import { startWorkflowAction } from "../actions";
 import { useRouter } from "next/navigation";
 import { useActiveBrand } from "@/contexts/active-brand-context";
+import { useWorkflow } from "@/contexts/workflow-context";
 
 interface ContentWizardProps {
     brands: BrandListItem[];
@@ -24,7 +27,9 @@ interface ContentWizardProps {
 export function ContentWizard({ brands }: ContentWizardProps) {
     const router = useRouter();
     const { activeBrandId } = useActiveBrand();
+    const { triggerAnimation } = useWorkflow();
     const [step, setStep] = useState(1);
+    const [autoMode, setAutoMode] = useState(true);
     const [config, setConfig] = useState<ContentGenerationConfig>({
         brandId: "",
         assetIds: [],
@@ -59,10 +64,13 @@ export function ContentWizard({ brands }: ContentWizardProps) {
 
         setIsGenerating(true);
         try {
-            const result = await generateContentAction(config);
+            const result = await startWorkflowAction(config, autoMode);
             
             if (result.success) {
-                toast.success(`Başarılı! ${result.count} adet içerik üretildi.`);
+                toast.success("Workflow başlatıldı!");
+                // Trigger droplet animation
+                triggerAnimation();
+                // Navigate to content page
                 router.push("/dashboard/content");
             } else {
                 toast.error(`Hata: ${result.error}`);
@@ -126,9 +134,18 @@ export function ContentWizard({ brands }: ContentWizardProps) {
                             Devam Et
                         </Button>
                     ) : (
-                        <Button onClick={handleGenerate} disabled={isGenerating}>
-                            {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isGenerating ? "Fal.ai İle Üretiliyor..." : "Üretimi Başlat"}
+                        <Button onClick={handleGenerate} disabled={isGenerating} className="gap-2">
+                            {isGenerating ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Başlatılıyor...
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="h-4 w-4" />
+                                    Workflow Başlat
+                                </>
+                            )}
                         </Button>
                     )}
                 </div>
@@ -156,6 +173,18 @@ export function ContentWizard({ brands }: ContentWizardProps) {
                             <div className="font-medium">
                                 {config.aspectRatio} • {config.mediaType === "photo" ? "Fotoğraf" : "Video"}
                             </div>
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="auto-mode-sidebar" className="font-medium">Auto Mode</Label>
+                                <p className="text-xs text-muted-foreground">Adımları otomatik çalıştır</p>
+                            </div>
+                            <Switch
+                                id="auto-mode-sidebar"
+                                checked={autoMode}
+                                onCheckedChange={setAutoMode}
+                            />
                         </div>
                     </div>
                 </Card>

@@ -1,10 +1,18 @@
 "use client";
 
-import { ContentGenerationConfig, ASPECT_RATIO_OPTIONS, MEDIA_TYPE_OPTIONS, AspectRatio, MediaType } from "@/modules/content/types";
+import { 
+    ContentGenerationConfig, 
+    ASPECT_RATIO_OPTIONS, 
+    MEDIA_TYPE_OPTIONS, 
+    VIDEO_DURATION_OPTIONS,
+    AspectRatio, 
+    MediaType,
+    VideoDuration 
+} from "@/modules/content/types";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Check, Image, Video } from "lucide-react";
+import { Check, Image, Video, Clock } from "lucide-react";
 
 interface FormatStepProps {
     config: ContentGenerationConfig;
@@ -20,6 +28,10 @@ export function PlatformConfigStep({ config, onConfigChange }: FormatStepProps) 
         onConfigChange({ ...config, mediaType: type });
     };
 
+    const selectVideoDuration = (duration: VideoDuration) => {
+        onConfigChange({ ...config, videoDuration: duration });
+    };
+
     return (
         <div className="space-y-8">
             {/* Aspect Ratio Selection */}
@@ -31,7 +43,7 @@ export function PlatformConfigStep({ config, onConfigChange }: FormatStepProps) 
                     </p>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
                     {ASPECT_RATIO_OPTIONS.map((option) => {
                         const isSelected = config.aspectRatio === option.id;
                         return (
@@ -52,7 +64,8 @@ export function PlatformConfigStep({ config, onConfigChange }: FormatStepProps) 
                                 <div className="mb-3 flex items-center gap-3">
                                     <div className={cn(
                                         "flex items-center justify-center rounded-lg border-2 bg-muted/50",
-                                        option.id === "1:1" ? "h-12 w-12" : "h-16 w-9"
+                                        option.id === "1:1" ? "h-12 w-12" : 
+                                        option.id === "9:16" ? "h-16 w-9" : "h-9 w-16"
                                     )}>
                                         <span className="text-xs font-medium text-muted-foreground">
                                             {option.id}
@@ -89,16 +102,14 @@ export function PlatformConfigStep({ config, onConfigChange }: FormatStepProps) 
                 <div className="grid gap-4 md:grid-cols-2">
                     {MEDIA_TYPE_OPTIONS.map((option) => {
                         const isSelected = config.mediaType === option.id;
-                        const isDisabled = option.id === "video"; // Video coming soon
                         
                         return (
                             <div
                                 key={option.id}
-                                onClick={() => !isDisabled && selectMediaType(option.id)}
+                                onClick={() => selectMediaType(option.id)}
                                 className={cn(
-                                    "relative cursor-pointer rounded-xl border-2 p-5 transition-all",
-                                    isSelected ? "border-primary bg-primary/5" : "border-muted",
-                                    isDisabled ? "cursor-not-allowed opacity-50" : "hover:border-primary/50"
+                                    "relative cursor-pointer rounded-xl border-2 p-5 transition-all hover:border-primary/50",
+                                    isSelected ? "border-primary bg-primary/5" : "border-muted"
                                 )}
                             >
                                 {isSelected && (
@@ -125,6 +136,46 @@ export function PlatformConfigStep({ config, onConfigChange }: FormatStepProps) 
                     })}
                 </div>
             </div>
+
+            {/* Video Duration Selection (only shown when video is selected) */}
+            {config.mediaType === "video" && (
+                <div className="space-y-4">
+                    <div>
+                        <Label className="text-base font-semibold">Video Süresi</Label>
+                        <p className="text-sm text-muted-foreground">
+                            Oluşturulacak videonun uzunluğunu seçin.
+                        </p>
+                    </div>
+
+                    <div className="flex gap-4">
+                        {VIDEO_DURATION_OPTIONS.map((option) => {
+                            const isSelected = (config.videoDuration || "5") === option.id;
+                            
+                            return (
+                                <div
+                                    key={option.id}
+                                    onClick={() => selectVideoDuration(option.id)}
+                                    className={cn(
+                                        "relative cursor-pointer rounded-xl border-2 px-6 py-4 transition-all hover:border-primary/50",
+                                        isSelected ? "border-primary bg-primary/5" : "border-muted"
+                                    )}
+                                >
+                                    {isSelected && (
+                                        <div className="absolute right-2 top-2 rounded-full bg-primary p-0.5">
+                                            <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                                        </div>
+                                    )}
+                                    
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="h-4 w-4 text-muted-foreground" />
+                                        <span className="font-medium">{option.label}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

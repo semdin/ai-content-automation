@@ -9,3 +9,4 @@ export * from "./brands";
 export * from "./mannequins";
 export * from "./brand-assets";
 export * from "./contents";
+export * from "./workflows";

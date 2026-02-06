@@ -1,8 +1,10 @@
 export type ContentGenerationStep = "assets" | "concept" | "format";
 
-export type AspectRatio = "1:1" | "9:16";
+export type AspectRatio = "1:1" | "9:16" | "16:9";
 
 export type MediaType = "photo" | "video";
+
+export type VideoDuration = "5" | "10";
 
 export interface ContentGenerationConfig {
     brandId: string;
@@ -11,6 +13,7 @@ export interface ContentGenerationConfig {
     prompt: string;
     aspectRatio: AspectRatio;
     mediaType: MediaType;
+    videoDuration?: VideoDuration;
 }
 
 // Resolution options with platform badges
@@ -32,6 +35,12 @@ export const ASPECT_RATIO_OPTIONS: {
         description: "Kısa video ve hikaye formatları için ideal",
         platforms: ["Reels", "TikTok", "YouTube Shorts", "Story"],
     },
+    {
+        id: "16:9",
+        label: "Yatay (16:9)",
+        description: "YouTube ve geniş ekran içerikler için ideal",
+        platforms: ["YouTube", "Website Banner"],
+    },
 ];
 
 export const MEDIA_TYPE_OPTIONS: {
@@ -47,6 +56,14 @@ export const MEDIA_TYPE_OPTIONS: {
     {
         id: "video",
         label: "Video",
-        description: "Hareketli içerik (yakında)",
+        description: "Kling V3 ile hareketli içerik",
     },
+];
+
+export const VIDEO_DURATION_OPTIONS: {
+    id: VideoDuration;
+    label: string;
+}[] = [
+    { id: "5", label: "5 saniye" },
+    { id: "10", label: "10 saniye" },
 ];

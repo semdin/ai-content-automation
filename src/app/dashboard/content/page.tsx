@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Sparkles, Instagram, Youtube, Video, Loader2 } from "lucide-react";
+import { PlusCircle, Sparkles, Instagram, Youtube, Video, Loader2, Play } from "lucide-react";
 import Link from "next/link";
 import { fetchContents } from "./actions";
 import { useActiveBrand } from "@/contexts/active-brand-context";
@@ -28,6 +28,10 @@ export default function ContentDashboardPage() {
             .then(setContentList)
             .finally(() => setLoading(false));
     }, [activeBrandId]);
+
+    const isVideo = (content: Content) => {
+        return content.format === "video" || !!content.falVideoUrl;
+    };
 
     return (
         <div className="space-y-6">
@@ -64,13 +68,31 @@ export default function ContentDashboardPage() {
                     {contentList.map((content) => (
                         <Card key={content.id} className="overflow-hidden">
                             <div className="relative aspect-square bg-muted">
-                                {content.falImageUrl && (
+                                {isVideo(content) && content.falVideoUrl ? (
+                                    <div className="relative h-full w-full">
+                                        <video
+                                            src={content.falVideoUrl}
+                                            className="h-full w-full object-cover"
+                                            muted
+                                            loop
+                                            playsInline
+                                            onMouseEnter={(e) => e.currentTarget.play()}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.pause();
+                                                e.currentTarget.currentTime = 0;
+                                            }}
+                                        />
+                                        <div className="absolute bottom-2 right-2 rounded-full bg-black/60 p-1.5">
+                                            <Play className="h-4 w-4 text-white fill-white" />
+                                        </div>
+                                    </div>
+                                ) : content.falImageUrl ? (
                                     <img
                                         src={content.falImageUrl}
                                         alt={content.prompt}
                                         className="h-full w-full object-cover"
                                     />
-                                )}
+                                ) : null}
                             </div>
                             <div className="p-4 space-y-3">
                                 <div className="flex items-center gap-2">
