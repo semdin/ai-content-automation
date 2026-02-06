@@ -6,7 +6,7 @@ import { getWorkflows } from "@/modules/workflow/services";
 import type { Workflow } from "@/db/schema/workflows";
 
 interface WorkflowContextType {
-    triggerAnimation: () => void;
+    triggerAnimation: (workflowId?: string) => void;
     openPanel: () => void;
     togglePanel: () => void;
     refreshWorkflows: () => void;
@@ -27,6 +27,9 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
     const [runningCount, setRunningCount] = useState(0);
     const [pendingCount, setPendingCount] = useState(0);
     const [completedCount, setCompletedCount] = useState(0);
+    
+    // Track ID of newly created workflow to open after animation (use state for reactivity)
+    const [pendingWorkflowId, setPendingWorkflowId] = useState<string | null>(null);
 
     const refreshWorkflows = useCallback(async () => {
         try {
@@ -46,24 +49,38 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         refreshWorkflows();
-        // Poll for updates every 3 seconds
         const interval = setInterval(refreshWorkflows, 3000);
         return () => clearInterval(interval);
     }, [refreshWorkflows]);
 
-    const triggerAnimation = () => {
+    // Trigger animation and optionally store workflow ID to open after
+    const triggerAnimation = useCallback((workflowId?: string) => {
+        if (workflowId) {
+            setPendingWorkflowId(workflowId);
+        }
         setIsAnimating(true);
+        
+        // Slower animation duration (1.5s) before opening panel
         setTimeout(() => {
             setIsAnimating(false);
             setIsPanelOpen(true);
-        }, 500);
+        }, 1500);
+        
         refreshWorkflows();
-    };
+    }, [refreshWorkflows]);
 
     const openPanel = () => setIsPanelOpen(true);
     
-    // Toggle: close if open, open if closed
-    const togglePanel = () => setIsPanelOpen(prev => !prev);
+    const togglePanel = () => {
+        setIsPanelOpen(prev => !prev);
+    };
+
+    // Handler for when panel closes
+    const handlePanelClose = useCallback(() => {
+        setIsPanelOpen(false);
+        setPendingWorkflowId(null);
+        refreshWorkflows();
+    }, [refreshWorkflows]);
 
     return (
         <WorkflowContext.Provider value={{ triggerAnimation, openPanel, togglePanel, refreshWorkflows }}>
@@ -74,13 +91,12 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
                 completedCount={completedCount}
                 onClick={togglePanel}
                 isAnimating={isAnimating}
+                isPanelOpen={isPanelOpen}
             />
             <WorkflowPanel
                 isOpen={isPanelOpen}
-                onClose={() => {
-                    setIsPanelOpen(false);
-                    refreshWorkflows();
-                }}
+                onClose={handlePanelClose}
+                initialWorkflowId={pendingWorkflowId}
             />
         </WorkflowContext.Provider>
     );

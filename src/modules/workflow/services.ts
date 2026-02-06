@@ -310,17 +310,23 @@ export async function retryStep(workflowId: string) {
     const workflow = await getWorkflow(workflowId);
     if (!workflow) throw new Error("Workflow not found");
     
-    const currentStep = workflow.steps.find(s => s.stepIndex === workflow.currentStep);
-    if (!currentStep) throw new Error("Step not found");
+    // When paused, currentStep is the *next* (pending) step
+    // We need to retry the *previous* step (the one that just completed)
+    const stepIndexToRetry = workflow.status === "paused" 
+        ? workflow.currentStep - 1 
+        : workflow.currentStep;
+    
+    const stepToRetry = workflow.steps.find(s => s.stepIndex === stepIndexToRetry);
+    if (!stepToRetry) throw new Error("Step to retry not found");
     
     // Reset step status
     await db.update(workflowSteps)
         .set({ status: "pending", error: null, output: null })
-        .where(eq(workflowSteps.id, currentStep.id));
+        .where(eq(workflowSteps.id, stepToRetry.id));
     
-    // Run step again
+    // Move workflow back to that step
     await db.update(workflows)
-        .set({ status: "running" })
+        .set({ status: "running", currentStep: stepIndexToRetry })
         .where(eq(workflows.id, workflowId));
     
     return runNextStep(workflowId);
@@ -351,6 +357,116 @@ export async function toggleAutoMode(workflowId: string, autoMode: boolean) {
     await db.update(workflows)
         .set({ autoMode })
         .where(eq(workflows.id, workflowId));
+    
+    return getWorkflow(workflowId);
+}
+
+// Generate another variant without erasing the original
+export async function generateVariant(workflowId: string) {
+    const workflow = await getWorkflow(workflowId);
+    if (!workflow) throw new Error("Workflow not found");
+    
+    // When paused, currentStep is the *next* (pending) step
+    // We need to generate a variant for the step that just completed
+    const stepIndex = workflow.status === "paused" 
+        ? workflow.currentStep - 1 
+        : workflow.currentStep;
+    
+    const step = workflow.steps.find(s => s.stepIndex === stepIndex);
+    if (!step) throw new Error("Step not found");
+    
+    const config = (await db.select().from(workflows).where(eq(workflows.id, workflowId)))[0].config as ContentGenerationConfig;
+    
+    // Mark step as generating variant
+    await db.update(workflowSteps)
+        .set({ status: "generating_variant" })
+        .where(eq(workflowSteps.id, step.id));
+    
+    try {
+        let newUrl: string;
+        
+        if (step.type === "image_gen") {
+            // Fetch asset URLs
+            const assets = await db.select().from(brandAssets).where(eq(brandAssets.brandId, config.brandId));
+            const assetUrls = assets.filter(a => config.assetIds.includes(a.id)).map(a => a.url);
+            
+            if (config.mannequinId) {
+                const photos = await db.select()
+                    .from(mannequinPhotos)
+                    .where(eq(mannequinPhotos.mannequinId, config.mannequinId));
+                const primaryPhoto = photos.find(p => p.isPrimary) || photos[0];
+                if (primaryPhoto) assetUrls.push(primaryPhoto.url);
+            }
+            
+            newUrl = await runImageGeneration(config.prompt, assetUrls, config.aspectRatio);
+            
+        } else if (step.type === "video_gen") {
+            const imageStep = workflow.steps.find(s => s.type === "image_gen");
+            const imageOutput = imageStep?.output as ImageGenOutput;
+            const selectedIdx = imageOutput?.selectedVariant ?? 0;
+            const imageUrl = selectedIdx === 0 
+                ? imageOutput?.imageUrl 
+                : imageOutput?.variants?.[selectedIdx - 1] ?? imageOutput?.imageUrl;
+                
+            if (!imageUrl) throw new Error("No image found");
+            
+            newUrl = await runVideoGeneration(
+                config.prompt, 
+                imageUrl, 
+                config.aspectRatio,
+                config.videoDuration || "5"
+            );
+        } else {
+            throw new Error("Cannot generate variant for this step type");
+        }
+        
+        // Add to variants array
+        const currentOutput = step.output as ImageGenOutput | VideoGenOutput;
+        const variants = currentOutput?.variants || [];
+        variants.push(newUrl);
+        
+        await db.update(workflowSteps)
+            .set({ 
+                status: "completed",
+                output: { ...currentOutput, variants } 
+            })
+            .where(eq(workflowSteps.id, step.id));
+        
+        // Keep workflow paused so user can choose
+        await db.update(workflows)
+            .set({ status: "paused" })
+            .where(eq(workflows.id, workflowId));
+        
+        return getWorkflow(workflowId);
+        
+    } catch (error: any) {
+        console.error("Variant generation error:", error);
+        
+        // Revert to completed status on error
+        await db.update(workflowSteps)
+            .set({ status: "completed" })
+            .where(eq(workflowSteps.id, step.id));
+        
+        throw error;
+    }
+}
+
+// Select which variant to use for next step
+export async function selectVariant(workflowId: string, stepIndex: number, variantIndex: number) {
+    const workflow = await getWorkflow(workflowId);
+    if (!workflow) throw new Error("Workflow not found");
+    
+    const step = workflow.steps.find(s => s.stepIndex === stepIndex);
+    if (!step) throw new Error("Step not found");
+    
+    const output = step.output as ImageGenOutput | VideoGenOutput;
+    if (!output) throw new Error("No output to select from");
+    
+    await db.update(workflowSteps)
+        .set({ 
+            output: { ...output, selectedVariant: variantIndex } 
+        })
+        .where(eq(workflowSteps.id, step.id));
     
     return getWorkflow(workflowId);
 }

@@ -10,6 +10,7 @@ interface WorkflowIconProps {
     completedCount?: number;
     onClick?: () => void;
     isAnimating?: boolean;
+    isPanelOpen?: boolean;
 }
 
 export function WorkflowIcon({ 
@@ -17,10 +18,15 @@ export function WorkflowIcon({
     pendingCount = 0,
     completedCount = 0,
     onClick, 
-    isAnimating = false 
+    isAnimating = false,
+    isPanelOpen = false
 }: WorkflowIconProps) {
     const hasActivity = runningCount > 0 || pendingCount > 0;
-    const totalActive = runningCount + pendingCount;
+    
+    // Don't show icon when panel is open (to prevent z-index issues)
+    if (isPanelOpen) {
+        return null;
+    }
     
     return (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
@@ -145,29 +151,47 @@ export function WorkflowIcon({
                 </AnimatePresence>
             </motion.button>
 
-            {/* Flying droplet animation */}
+            {/* Flying droplet animation - zig-zag, slower, enters icon */}
             <AnimatePresence>
                 {isAnimating && (
                     <motion.div
-                        initial={{ y: -120, x: 0, opacity: 1, scale: 1.2 }}
+                        initial={{ y: -200, x: -60, opacity: 1, scale: 1.5 }}
                         animate={{ 
-                            y: 0, 
-                            x: 0, 
-                            opacity: 0,
-                            scale: 0.3,
+                            y: [
+                                -200,  // Start high
+                                -160,  // Move down
+                                -120,  // Continue
+                                -80,   // Getting closer
+                                -40,   // Almost there
+                                0,     // Enter icon
+                            ],
+                            x: [
+                                -60,   // Start left
+                                40,    // Swing right
+                                -30,   // Swing left
+                                25,    // Swing right
+                                -15,   // Swing left
+                                0,     // Center
+                            ],
+                            opacity: [1, 1, 1, 1, 0.8, 0],
+                            scale: [1.5, 1.3, 1.1, 0.9, 0.6, 0],
                         }}
-                        exit={{ opacity: 0 }}
                         transition={{ 
-                            duration: 0.5,
-                            ease: "easeIn",
+                            duration: 1.4,
+                            ease: "easeInOut",
+                            times: [0, 0.2, 0.4, 0.6, 0.8, 1],
                         }}
                         className={cn(
-                            "absolute top-0 left-1/2 -translate-x-1/2",
-                            "h-5 w-5 rounded-full",
-                            "bg-gradient-to-br from-cyan-400 to-blue-500",
-                            "shadow-lg shadow-cyan-400/50"
+                            "absolute top-0 left-1/2",
+                            "h-6 w-6 rounded-full",
+                            "bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500",
+                            "shadow-lg shadow-cyan-400/60"
                         )}
-                    />
+                        style={{ translateX: "-50%" }}
+                    >
+                        {/* Inner glow */}
+                        <div className="absolute inset-1 rounded-full bg-white/40" />
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

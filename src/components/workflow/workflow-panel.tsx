@@ -13,6 +13,7 @@ import { WorkflowWithSteps } from "@/modules/workflow/types";
 interface WorkflowPanelProps {
     isOpen: boolean;
     onClose: () => void;
+    initialWorkflowId?: string | null;
 }
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -43,7 +44,7 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; label
     },
 };
 
-export function WorkflowPanel({ isOpen, onClose }: WorkflowPanelProps) {
+export function WorkflowPanel({ isOpen, onClose, initialWorkflowId }: WorkflowPanelProps) {
     const [workflowList, setWorkflowList] = useState<Workflow[]>([]);
     const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowWithSteps | null>(null);
     const [loading, setLoading] = useState(false);
@@ -53,8 +54,10 @@ export function WorkflowPanel({ isOpen, onClose }: WorkflowPanelProps) {
         try {
             const data = await getWorkflows();
             setWorkflowList(data);
+            return data;
         } catch (e) {
             console.error("Failed to fetch workflows:", e);
+            return [];
         }
     }, []);
 
@@ -67,13 +70,34 @@ export function WorkflowPanel({ isOpen, onClose }: WorkflowPanelProps) {
         }
     }, []);
 
-    // Initial load
+    // ESC key to close
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && isOpen) {
+                onClose();
+            }
+        };
+        
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isOpen, onClose]);
+
+    // Initial load and auto-select new workflow
     useEffect(() => {
         if (isOpen) {
             setLoading(true);
-            loadWorkflows().finally(() => setLoading(false));
+            loadWorkflows().then(async (workflows) => {
+                // If we have a pending workflow ID, select it
+                if (initialWorkflowId) {
+                    await loadSelectedWorkflow(initialWorkflowId);
+                }
+                setLoading(false);
+            });
+        } else {
+            // Reset selection when closed
+            setSelectedWorkflow(null);
         }
-    }, [isOpen, loadWorkflows]);
+    }, [isOpen, initialWorkflowId, loadWorkflows, loadSelectedWorkflow]);
 
     // Polling for updates
     useEffect(() => {
@@ -108,7 +132,7 @@ export function WorkflowPanel({ isOpen, onClose }: WorkflowPanelProps) {
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* Backdrop */}
+                    {/* Backdrop - click to close */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -119,15 +143,16 @@ export function WorkflowPanel({ isOpen, onClose }: WorkflowPanelProps) {
 
                     {/* Center Modal */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
                     >
                         <div 
+                            onClick={(e) => e.stopPropagation()}
                             className={cn(
-                                "relative w-full max-w-5xl overflow-hidden rounded-2xl",
+                                "relative w-full max-w-5xl overflow-hidden rounded-2xl pointer-events-auto",
                                 "bg-gradient-to-br from-zinc-900/95 via-zinc-900/98 to-zinc-950/95",
                                 "border border-white/10 shadow-2xl shadow-black/50",
                                 "backdrop-blur-xl",
