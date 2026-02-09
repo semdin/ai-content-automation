@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
     Image, Video, CheckCircle2, XCircle, Clock, Loader2, 
-    Plus, Play, X, ZoomIn, Check, ChevronLeft, ChevronRight
+    Plus, Play, X, ZoomIn, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -62,7 +63,7 @@ const statusStyles: Record<StepStatus, { bg: string; border: string; text: strin
     },
 };
 
-// Lightbox Component
+// Independent Lightbox Component using Portal
 function Lightbox({ 
     src, 
     type, 
@@ -72,45 +73,62 @@ function Lightbox({
     type: "image" | "video"; 
     onClose: () => void;
 }) {
-    return (
+    // ESC key handler
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onClose]);
+
+    // Use portal to render outside of any parent constraints
+    return createPortal(
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95"
+            style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}
         >
             <Button
                 variant="ghost"
                 size="icon"
-                onClick={onClose}
-                className="absolute top-4 right-4 h-10 w-10 text-white hover:bg-white/10 z-10"
+                onClick={(e) => { e.stopPropagation(); onClose(); }}
+                className="absolute top-6 right-6 h-12 w-12 text-white hover:bg-white/10 z-10 rounded-full"
             >
-                <X className="h-6 w-6" />
+                <X className="h-7 w-7" />
             </Button>
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="max-w-4xl max-h-[85vh] overflow-hidden rounded-xl"
+                className="flex items-center justify-center p-8"
+                style={{ maxWidth: "95vw", maxHeight: "95vh" }}
             >
                 {type === "image" ? (
-                    <img src={src} alt="Preview" className="max-w-full max-h-[85vh] object-contain" />
+                    <img 
+                        src={src} 
+                        alt="Preview" 
+                        style={{ maxWidth: "95vw", maxHeight: "95vh", objectFit: "contain" }}
+                    />
                 ) : (
                     <video 
                         src={src} 
                         controls 
                         autoPlay 
-                        className="max-w-full max-h-[85vh]"
+                        style={{ maxWidth: "95vw", maxHeight: "95vh" }}
                     />
                 )}
             </motion.div>
-        </motion.div>
+        </motion.div>,
+        document.body
     );
 }
 
-// Step Card Component (to properly use hooks)
+// Step Card Component
 function StepCard({ 
     step, 
     index, 
@@ -148,15 +166,17 @@ function StepCard({
         if (output.variants) allMedia.push(...output.variants);
     }
     const selectedIdx = output?.selectedVariant ?? 0;
-    const [currentViewIdx, setCurrentViewIdx] = useState(selectedIdx);
-
-    // Reset view index when variants change
-    useEffect(() => {
-        setCurrentViewIdx(selectedIdx);
-    }, [selectedIdx, allMedia.length]);
     
     const isImage = output && "imageUrl" in output;
     const isVideo = output && "videoUrl" in output;
+
+    // Grid layout based on count
+    const getGridClass = (count: number) => {
+        if (count === 1) return "grid-cols-1";
+        if (count === 2) return "grid-cols-2";
+        if (count <= 4) return "grid-cols-2";
+        return "grid-cols-3";
+    };
 
     return (
         <div className="flex items-center">
@@ -169,7 +189,7 @@ function StepCard({
                     "relative rounded-2xl border-2 overflow-hidden",
                     styles.bg, styles.border, styles.glow,
                     "transition-all duration-300",
-                    hasPreview ? "w-[260px]" : "w-[200px]"
+                    hasPreview && allMedia.length > 1 ? "w-[320px]" : hasPreview ? "w-[280px]" : "w-[220px]"
                 )}
             >
                 {/* Header - Name + Status Icon */}
@@ -199,7 +219,7 @@ function StepCard({
                 <div className="p-4">
                     {/* Status for non-completed */}
                     {step.status !== "completed" && step.status !== "generating_variant" && (
-                        <div className={cn("text-sm font-medium text-center py-10", styles.text)}>
+                        <div className={cn("text-sm font-medium text-center py-12", styles.text)}>
                             {step.status === "pending" && "Bekliyor..."}
                             {step.status === "running" && (
                                 <div className="flex flex-col items-center gap-2">
@@ -222,109 +242,73 @@ function StepCard({
                         </div>
                     )}
 
-                    {/* Preview with variant navigation */}
+                    {/* Grid Preview for variants */}
                     {hasPreview && allMedia.length > 0 && (
-                        <div className="relative group">
-                            {/* Media display */}
-                            {isImage && (
+                        <div className={cn("grid gap-2", getGridClass(allMedia.length))}>
+                            {allMedia.map((url, idx) => (
                                 <button
-                                    onClick={() => onLightbox(allMedia[currentViewIdx], "image")}
+                                    key={idx}
+                                    onClick={() => onLightbox(url, isImage ? "image" : "video")}
                                     className={cn(
-                                        "relative block w-full rounded-xl overflow-hidden transition-all",
+                                        "relative rounded-xl overflow-hidden transition-all group",
                                         "border-2",
-                                        currentViewIdx === selectedIdx 
-                                            ? "border-emerald-500" 
-                                            : "border-white/10 hover:border-white/30"
+                                        idx === selectedIdx 
+                                            ? "border-emerald-500 ring-2 ring-emerald-500/30" 
+                                            : "border-white/10 hover:border-white/30",
+                                        allMedia.length === 1 ? "aspect-[4/5]" : "aspect-square"
                                     )}
                                 >
-                                    <img
-                                        src={allMedia[currentViewIdx]}
-                                        alt="Generated"
-                                        className="w-full h-44 object-cover"
-                                    />
+                                    {isImage ? (
+                                        <img
+                                            src={url}
+                                            alt={`Generated ${idx + 1}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <>
+                                            <video
+                                                src={url}
+                                                className="w-full h-full object-cover"
+                                                muted
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                <Play className="h-6 w-6 text-white fill-white" />
+                                            </div>
+                                        </>
+                                    )}
+                                    
+                                    {/* Hover overlay */}
                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                        <ZoomIn className="h-6 w-6 text-white" />
+                                        <ZoomIn className="h-5 w-5 text-white" />
                                     </div>
-                                    {currentViewIdx === selectedIdx && allMedia.length > 1 && (
-                                        <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
-                                            Seçili
+
+                                    {/* Selected badge */}
+                                    {idx === selectedIdx && allMedia.length > 1 && (
+                                        <div className="absolute top-1.5 left-1.5 bg-emerald-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                                            ✓
                                         </div>
                                     )}
-                                </button>
-                            )}
-                            {isVideo && (
-                                <button
-                                    onClick={() => onLightbox(allMedia[currentViewIdx], "video")}
-                                    className={cn(
-                                        "relative block w-full rounded-xl overflow-hidden transition-all",
-                                        "border-2",
-                                        currentViewIdx === selectedIdx 
-                                            ? "border-emerald-500" 
-                                            : "border-white/10 hover:border-white/30"
-                                    )}
-                                >
-                                    <video
-                                        src={allMedia[currentViewIdx]}
-                                        className="w-full h-44 object-cover"
-                                        muted
-                                    />
-                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/70 transition-colors">
-                                        <Play className="h-10 w-10 text-white fill-white" />
-                                    </div>
-                                    {currentViewIdx === selectedIdx && allMedia.length > 1 && (
-                                        <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
-                                            Seçili
-                                        </div>
+
+                                    {/* Click to select (for non-selected variants when paused) */}
+                                    {showActions && idx !== selectedIdx && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onSelectVariant(step.stepIndex, idx);
+                                            }}
+                                            className="absolute bottom-1.5 right-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            Seç
+                                        </button>
                                     )}
                                 </button>
-                            )}
-
-                            {/* Variant navigation */}
-                            {allMedia.length > 1 && (
-                                <div className="flex items-center justify-between mt-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setCurrentViewIdx(Math.max(0, currentViewIdx - 1))}
-                                        disabled={currentViewIdx === 0}
-                                        className="h-7 w-7"
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                    <span className="text-xs text-zinc-400">
-                                        {currentViewIdx + 1} / {allMedia.length}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setCurrentViewIdx(Math.min(allMedia.length - 1, currentViewIdx + 1))}
-                                        disabled={currentViewIdx === allMedia.length - 1}
-                                        className="h-7 w-7"
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            )}
-
-                            {/* Select this variant (if viewing non-selected) */}
-                            {showActions && allMedia.length > 1 && currentViewIdx !== selectedIdx && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onSelectVariant(step.stepIndex, currentViewIdx)}
-                                    disabled={loading}
-                                    className="w-full mt-2 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
-                                >
-                                    <Check className="h-4 w-4 mr-1" />
-                                    Bunu Seç
-                                </Button>
-                            )}
+                            ))}
                         </div>
                     )}
 
                     {/* Action Buttons - On the card that just completed */}
                     {showActions && step.status === "completed" && (
-                        <div className="flex flex-col gap-2 mt-3">
+                        <div className="flex flex-col gap-2 mt-4">
                             <Button
                                 onClick={onApprove}
                                 disabled={loading}
@@ -362,15 +346,15 @@ function StepCard({
 
             {/* Connector */}
             {!isLast && (
-                <div className="flex items-center px-4">
+                <div className="flex items-center px-5">
                     <div className={cn(
-                        "h-0.5 w-12",
+                        "h-0.5 w-14",
                         step.status === "completed" 
                             ? "bg-gradient-to-r from-emerald-500 to-emerald-500/30" 
                             : "bg-zinc-700"
                     )} />
                     <div className={cn(
-                        "h-3 w-3 rounded-full -ml-1.5",
+                        "h-3.5 w-3.5 rounded-full -ml-1.5",
                         step.status === "completed" 
                             ? "bg-emerald-500" 
                             : "bg-zinc-700"
@@ -466,8 +450,8 @@ export function WorkflowDiagram({ workflow, onUpdate }: WorkflowDiagramProps) {
                     </div>
                 )}
 
-                {/* Horizontal Pipeline - Centered */}
-                <div className="flex-1 flex items-center justify-center px-8 pb-8 overflow-x-auto">
+                {/* Horizontal Pipeline - Centered both horizontally and vertically */}
+                <div className="flex-1 flex items-center justify-center px-8 pb-8 overflow-x-auto min-h-0">
                     <div className="flex items-center gap-0">
                         {workflow.steps.map((step, index) => (
                             <StepCard
