@@ -5,33 +5,37 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-    PlusCircle, Sparkles, Instagram, Youtube, Video, Loader2, Play, 
-    ImageIcon, Filter 
+    PlusCircle, Sparkles, Loader2, Play, 
+    ImageIcon, Video, Camera
 } from "lucide-react";
 import Link from "next/link";
 import { fetchContents } from "./actions";
 import { useActiveBrand } from "@/contexts/active-brand-context";
+import { useWorkflow } from "@/contexts/workflow-context";
 import { Content } from "@/db/schema/contents";
 import { cn } from "@/lib/utils";
 
-const platformIcons: Record<string, React.ReactNode> = {
-    instagram: <Instagram className="h-4 w-4" />,
-    youtube: <Youtube className="h-4 w-4" />,
-    tiktok: <Video className="h-4 w-4" />,
-    reels: <Video className="h-4 w-4" />,
-};
+type FilterTab = "all" | "photo" | "video";
 
-const platformColors: Record<string, string> = {
-    instagram: "from-pink-500 to-purple-600",
-    youtube: "from-red-500 to-red-600",
-    tiktok: "from-black to-gray-800",
-    reels: "from-pink-500 to-orange-500",
+const formatConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+    photo: {
+        icon: <Camera className="h-3.5 w-3.5" />,
+        label: "Fotoğraf",
+        color: "from-violet-500 to-purple-600",
+    },
+    video: {
+        icon: <Video className="h-3.5 w-3.5" />,
+        label: "Video",
+        color: "from-pink-500 to-orange-500",
+    },
 };
 
 export default function ContentDashboardPage() {
     const { activeBrandId } = useActiveBrand();
+    const { openWorkflowById } = useWorkflow();
     const [contentList, setContentList] = useState<Content[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
 
     useEffect(() => {
         setLoading(true);
@@ -43,6 +47,28 @@ export default function ContentDashboardPage() {
     const isVideo = (content: Content) => {
         return content.format === "video" || !!content.falVideoUrl;
     };
+
+    const filteredList = activeFilter === "all" 
+        ? contentList 
+        : contentList.filter(c => {
+            if (activeFilter === "video") return isVideo(c);
+            return !isVideo(c);
+        });
+
+    const photoCount = contentList.filter(c => !isVideo(c)).length;
+    const videoCount = contentList.filter(c => isVideo(c)).length;
+
+    const handleContentClick = (content: Content) => {
+        if (content.workflowId) {
+            openWorkflowById(content.workflowId);
+        }
+    };
+
+    const filterTabs: { id: FilterTab; label: string; count: number }[] = [
+        { id: "all", label: "Tümü", count: contentList.length },
+        { id: "photo", label: "Fotoğraf", count: photoCount },
+        { id: "video", label: "Video", count: videoCount },
+    ];
 
     return (
         <div className="space-y-6">
@@ -59,18 +85,38 @@ export default function ContentDashboardPage() {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="hidden md:flex">
-                        <Filter className="h-4 w-4 mr-2" />
-                        Filtrele
-                    </Button>
-                    <Button asChild className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700">
-                        <Link href="/dashboard/content/create">
-                            <PlusCircle className="h-4 w-4 mr-2" />
-                            Yeni Oluştur
-                        </Link>
-                    </Button>
-                </div>
+                <Button asChild className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700">
+                    <Link href="/dashboard/content/create">
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Yeni Oluştur
+                    </Link>
+                </Button>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-1 border-b">
+                {filterTabs.map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveFilter(tab.id)}
+                        className={cn(
+                            "px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px",
+                            activeFilter === tab.id
+                                ? "border-primary text-primary"
+                                : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                        )}
+                    >
+                        {tab.label}
+                        <span className={cn(
+                            "ml-2 text-xs px-1.5 py-0.5 rounded-full",
+                            activeFilter === tab.id
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground"
+                        )}>
+                            {tab.count}
+                        </span>
+                    </button>
+                ))}
             </div>
 
             {/* Content */}
@@ -81,13 +127,17 @@ export default function ContentDashboardPage() {
                         <p className="text-sm text-muted-foreground">İçerikler yükleniyor...</p>
                     </div>
                 </div>
-            ) : contentList.length === 0 ? (
+            ) : filteredList.length === 0 ? (
                 <Card className="border-dashed">
                     <CardContent className="py-16 text-center">
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-600/20 mb-4">
                             <Sparkles className="h-8 w-8 text-violet-500" />
                         </div>
-                        <h3 className="text-lg font-semibold mb-2">Henüz içerik üretilmedi</h3>
+                        <h3 className="text-lg font-semibold mb-2">
+                            {activeFilter === "all" 
+                                ? "Henüz içerik üretilmedi" 
+                                : `Henüz ${activeFilter === "photo" ? "fotoğraf" : "video"} üretilmedi`}
+                        </h3>
                         <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
                             AI destekli içerik oluşturma gücünü keşfedin ve ilk içeriğinizi oluşturun
                         </p>
@@ -101,70 +151,83 @@ export default function ContentDashboardPage() {
                 </Card>
             ) : (
                 <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                    {contentList.map((content) => (
-                        <Card key={content.id} className="group overflow-hidden hover:shadow-lg transition-all duration-300">
-                            {/* Media Preview */}
-                            <div className="relative aspect-square bg-muted overflow-hidden">
-                                {isVideo(content) && content.falVideoUrl ? (
-                                    <div className="relative h-full w-full">
-                                        <video
-                                            src={content.falVideoUrl}
+                    {filteredList.map((content) => {
+                        const fmt = formatConfig[isVideo(content) ? "video" : "photo"];
+                        return (
+                            <Card 
+                                key={content.id} 
+                                className={cn(
+                                    "group overflow-hidden hover:shadow-lg transition-all duration-300",
+                                    content.workflowId && "cursor-pointer"
+                                )}
+                                onClick={() => handleContentClick(content)}
+                            >
+                                {/* Media Preview */}
+                                <div className="relative aspect-square bg-muted overflow-hidden">
+                                    {isVideo(content) && content.falVideoUrl ? (
+                                        <div className="relative h-full w-full">
+                                            <video
+                                                src={content.falVideoUrl}
+                                                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                muted
+                                                loop
+                                                playsInline
+                                                onMouseEnter={(e) => e.currentTarget.play()}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.pause();
+                                                    e.currentTarget.currentTime = 0;
+                                                }}
+                                            />
+                                            <div className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm">
+                                                <Play className="h-4 w-4 text-white fill-white" />
+                                            </div>
+                                        </div>
+                                    ) : content.falImageUrl ? (
+                                        <img
+                                            src={content.falImageUrl}
+                                            alt={content.prompt}
                                             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            muted
-                                            loop
-                                            playsInline
-                                            onMouseEnter={(e) => e.currentTarget.play()}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.pause();
-                                                e.currentTarget.currentTime = 0;
-                                            }}
                                         />
-                                        <div className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm">
-                                            <Play className="h-4 w-4 text-white fill-white" />
+                                    ) : (
+                                        <div className="h-full w-full flex items-center justify-center">
+                                            <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
+                                        </div>
+                                    )}
+
+                                    {/* Format Badge */}
+                                    <div className="absolute top-2 left-2">
+                                        <div className={cn(
+                                            "flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-br text-white shadow-md text-xs font-medium",
+                                            fmt.color
+                                        )}>
+                                            {fmt.icon}
+                                            {fmt.label}
                                         </div>
                                     </div>
-                                ) : content.falImageUrl ? (
-                                    <img
-                                        src={content.falImageUrl}
-                                        alt={content.prompt}
-                                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                    />
-                                ) : (
-                                    <div className="h-full w-full flex items-center justify-center">
-                                        <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
+
+                                    {/* Aspect Ratio Badge */}
+                                    {content.aspectRatio && (
+                                        <div className="absolute top-2 right-2">
+                                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-black/60 text-white border-0">
+                                                {content.aspectRatio}
+                                            </Badge>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Info */}
+                                <CardContent className="p-3">
+                                    <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+                                        {content.generatedCaption || content.prompt}
+                                    </p>
+                                    <div className="text-xs text-muted-foreground mt-2 flex items-center justify-between">
+                                        <span>{new Date(content.createdAt).toLocaleDateString("tr-TR")}</span>
+                                        <span>{fmt.label}</span>
                                     </div>
-                                )}
-
-                                {/* Platform Badge */}
-                                <div className="absolute top-2 left-2">
-                                    <div className={cn(
-                                        "flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-md",
-                                        platformColors[content.platform] || "from-gray-500 to-gray-600"
-                                    )}>
-                                        {platformIcons[content.platform] || <Instagram className="h-3.5 w-3.5" />}
-                                    </div>
-                                </div>
-
-                                {/* Format Badge */}
-                                <div className="absolute top-2 right-2">
-                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-black/60 text-white border-0">
-                                        {content.format}
-                                    </Badge>
-                                </div>
-                            </div>
-
-                            {/* Info */}
-                            <CardContent className="p-3">
-                                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-                                    {content.generatedCaption || content.prompt}
-                                </p>
-                                <div className="text-xs text-muted-foreground mt-2 flex items-center justify-between">
-                                    <span>{new Date(content.createdAt).toLocaleDateString("tr-TR")}</span>
-                                    <span className="capitalize">{content.platform}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
             )}
         </div>

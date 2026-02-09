@@ -10,6 +10,7 @@ interface WorkflowContextType {
     openPanel: () => void;
     togglePanel: () => void;
     refreshWorkflows: () => void;
+    openWorkflowById: (workflowId: string) => void;
 }
 
 const WorkflowContext = createContext<WorkflowContextType>({
@@ -17,6 +18,7 @@ const WorkflowContext = createContext<WorkflowContextType>({
     openPanel: () => {},
     togglePanel: () => {},
     refreshWorkflows: () => {},
+    openWorkflowById: () => {},
 });
 
 export const useWorkflow = () => useContext(WorkflowContext);
@@ -75,6 +77,11 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
         setIsPanelOpen(prev => !prev);
     };
 
+    const openWorkflowById = useCallback((workflowId: string) => {
+        setPendingWorkflowId(workflowId);
+        setIsPanelOpen(true);
+    }, []);
+
     // Handler for when panel closes
     const handlePanelClose = useCallback(() => {
         setIsPanelOpen(false);
@@ -83,7 +90,7 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
     }, [refreshWorkflows]);
 
     return (
-        <WorkflowContext.Provider value={{ triggerAnimation, openPanel, togglePanel, refreshWorkflows }}>
+        <WorkflowContext.Provider value={{ triggerAnimation, openPanel, togglePanel, refreshWorkflows, openWorkflowById }}>
             {children}
             <WorkflowIcon
                 runningCount={runningCount}

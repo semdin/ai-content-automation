@@ -61,6 +61,10 @@ export function ContentWizard({ brands }: ContentWizardProps) {
             toast.error("Lütfen marka ve görsel seçiniz.");
             return;
         }
+        if (!config.prompt.trim()) {
+            toast.error("Lütfen konsept prompt giriniz.");
+            return;
+        }
 
         setIsGenerating(true);
         try {
@@ -129,7 +133,8 @@ export function ContentWizard({ brands }: ContentWizardProps) {
                     
                     {step < 3 ? (
                         <Button onClick={nextStep} disabled={
-                            (step === 1 && (!config.brandId || config.assetIds.length === 0))
+                            (step === 1 && (!config.brandId || config.assetIds.length === 0)) ||
+                            (step === 2 && !config.prompt.trim())
                         }>
                             Devam Et
                         </Button>

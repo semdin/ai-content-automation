@@ -229,7 +229,8 @@ export async function runNextStep(workflowId: string) {
             await db.insert(contents).values({
                 brandId: config.brandId,
                 userId: user.id,
-                platform: config.aspectRatio === "9:16" ? "reels" : "instagram",
+                workflowId: workflowId,
+                platform: config.mediaType,
                 format: config.mediaType,
                 prompt: config.prompt,
                 aspectRatio: config.aspectRatio,

@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
 import { brands } from "./brands";
 import { user } from "./auth";
+import { workflows } from "./workflows";
 
 export const contents = pgTable("contents", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -10,6 +11,8 @@ export const contents = pgTable("contents", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  workflowId: uuid("workflow_id")
+    .references(() => workflows.id, { onDelete: "set null" }),
 
   // Configuration
   platform: text("platform").notNull(), 
