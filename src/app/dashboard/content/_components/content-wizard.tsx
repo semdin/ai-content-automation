@@ -69,7 +69,7 @@ export function ContentWizard({ brands }: ContentWizardProps) {
             if (result.success) {
                 toast.success("Workflow başlatıldı!");
                 // Trigger droplet animation
-                triggerAnimation();
+                triggerAnimation(result.workflowId);
                 // Navigate to content page
                 router.push("/dashboard/content");
             } else {
