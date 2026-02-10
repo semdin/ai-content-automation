@@ -15,17 +15,24 @@ import {
     SidebarTrigger,
     SidebarGroup,
     SidebarGroupLabel,
+    useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { 
-    Home, ImageIcon, FolderOpen, Settings, LogOut, Tags, Users,
-    Sparkles, LayoutDashboard, Palette, Image
+    ImageIcon, FolderOpen, Settings, LogOut, Tags, Users,
+    Sparkles, LayoutDashboard,
 } from "lucide-react";
 import Link from "next/link";
 import { BrandSwitcher } from "./brand-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface User {
     id: string;
@@ -55,15 +62,7 @@ const settingsMenuItems = [
     { title: "Ayarlar", icon: Settings, href: "/dashboard/settings" },
 ];
 
-export function DashboardShell({
-    children,
-    user,
-    brands,
-}: {
-    children: React.ReactNode;
-    user: User;
-    brands: Brand[];
-}) {
+function AppSidebar({ user, brands }: { user: User; brands: Brand[] }) {
     const router = useRouter();
     const pathname = usePathname();
 
@@ -80,116 +79,167 @@ export function DashboardShell({
     };
 
     return (
+        <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+            {/* Header with Brand Switcher */}
+            <SidebarHeader className="p-3">
+                <BrandSwitcher brands={brands} />
+            </SidebarHeader>
+
+            <Separator className="mx-3 w-auto" />
+
+            <SidebarContent className="px-2">
+                {/* Main Navigation */}
+                <SidebarGroup>
+                    <SidebarGroupLabel className="text-xs text-muted-foreground px-3 py-2">
+                        Ana Menü
+                    </SidebarGroupLabel>
+                    <SidebarMenu>
+                        {mainMenuItems.map((item) => (
+                            <SidebarMenuItem key={item.href}>
+                                <SidebarMenuButton 
+                                    asChild 
+                                    isActive={isActive(item.href)}
+                                    tooltip={item.title}
+                                    className={cn(
+                                        "transition-all duration-200",
+                                        isActive(item.href) && "bg-primary/10 text-primary font-medium"
+                                    )}
+                                >
+                                    <Link href={item.href}>
+                                        <item.icon className="h-4 w-4" />
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </SidebarGroup>
+
+                {/* Management */}
+                <SidebarGroup>
+                    <SidebarGroupLabel className="text-xs text-muted-foreground px-3 py-2">
+                        Yönetim
+                    </SidebarGroupLabel>
+                    <SidebarMenu>
+                        {managementMenuItems.map((item) => (
+                            <SidebarMenuItem key={item.href}>
+                                <SidebarMenuButton 
+                                    asChild 
+                                    isActive={isActive(item.href)}
+                                    tooltip={item.title}
+                                    className={cn(
+                                        "transition-all duration-200",
+                                        isActive(item.href) && "bg-primary/10 text-primary font-medium"
+                                    )}
+                                >
+                                    <Link href={item.href}>
+                                        <item.icon className="h-4 w-4" />
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </SidebarGroup>
+
+                {/* Settings */}
+                <SidebarGroup className="mt-auto">
+                    <SidebarMenu>
+                        {settingsMenuItems.map((item) => (
+                            <SidebarMenuItem key={item.href}>
+                                <SidebarMenuButton 
+                                    asChild 
+                                    isActive={isActive(item.href)}
+                                    tooltip={item.title}
+                                    className={cn(
+                                        "transition-all duration-200",
+                                        isActive(item.href) && "bg-primary/10 text-primary font-medium"
+                                    )}
+                                >
+                                    <Link href={item.href}>
+                                        <item.icon className="h-4 w-4" />
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </SidebarGroup>
+            </SidebarContent>
+
+            <Separator className="mx-3 w-auto" />
+
+            {/* Footer with User Info - Dropdown for both expanded and collapsed */}
+            <SidebarFooter className="p-3">
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <SidebarMenuButton
+                                    size="lg"
+                                    tooltip={user.name}
+                                    className="hover:bg-sidebar-accent transition-colors"
+                                >
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold text-sm">
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{user.name}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                                    </div>
+                                </SidebarMenuButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                className="w-56"
+                                side="top"
+                                align="start"
+                                sideOffset={8}
+                            >
+                                <div className="flex items-center gap-3 px-2 py-2">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold text-sm">
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{user.name}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                                    </div>
+                                </div>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/dashboard/settings" className="cursor-pointer">
+                                        <Settings className="h-4 w-4 mr-2" />
+                                        Ayarlar
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    onClick={handleSignOut}
+                                    className="text-destructive cursor-pointer focus:text-destructive"
+                                >
+                                    <LogOut className="h-4 w-4 mr-2" />
+                                    Çıkış Yap
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
+        </Sidebar>
+    );
+}
+
+export function DashboardShell({
+    children,
+    user,
+    brands,
+}: {
+    children: React.ReactNode;
+    user: User;
+    brands: Brand[];
+}) {
+    return (
         <SidebarProvider>
-            <Sidebar className="border-r border-sidebar-border">
-                {/* Header with Brand Switcher */}
-                <SidebarHeader className="p-3">
-                    <BrandSwitcher brands={brands} />
-                </SidebarHeader>
-
-                <Separator className="mx-3 w-auto" />
-
-                <SidebarContent className="px-2">
-                    {/* Main Navigation */}
-                    <SidebarGroup>
-                        <SidebarGroupLabel className="text-xs text-muted-foreground px-3 py-2">
-                            Ana Menü
-                        </SidebarGroupLabel>
-                        <SidebarMenu>
-                            {mainMenuItems.map((item) => (
-                                <SidebarMenuItem key={item.href}>
-                                    <SidebarMenuButton 
-                                        asChild 
-                                        isActive={isActive(item.href)}
-                                        className={cn(
-                                            "transition-all duration-200",
-                                            isActive(item.href) && "bg-primary/10 text-primary font-medium"
-                                        )}
-                                    >
-                                        <Link href={item.href}>
-                                            <item.icon className="h-4 w-4" />
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroup>
-
-                    {/* Management */}
-                    <SidebarGroup>
-                        <SidebarGroupLabel className="text-xs text-muted-foreground px-3 py-2">
-                            Yönetim
-                        </SidebarGroupLabel>
-                        <SidebarMenu>
-                            {managementMenuItems.map((item) => (
-                                <SidebarMenuItem key={item.href}>
-                                    <SidebarMenuButton 
-                                        asChild 
-                                        isActive={isActive(item.href)}
-                                        className={cn(
-                                            "transition-all duration-200",
-                                            isActive(item.href) && "bg-primary/10 text-primary font-medium"
-                                        )}
-                                    >
-                                        <Link href={item.href}>
-                                            <item.icon className="h-4 w-4" />
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroup>
-
-                    {/* Settings */}
-                    <SidebarGroup className="mt-auto">
-                        <SidebarMenu>
-                            {settingsMenuItems.map((item) => (
-                                <SidebarMenuItem key={item.href}>
-                                    <SidebarMenuButton 
-                                        asChild 
-                                        isActive={isActive(item.href)}
-                                        className={cn(
-                                            "transition-all duration-200",
-                                            isActive(item.href) && "bg-primary/10 text-primary font-medium"
-                                        )}
-                                    >
-                                        <Link href={item.href}>
-                                            <item.icon className="h-4 w-4" />
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroup>
-                </SidebarContent>
-
-                <Separator className="mx-3 w-auto" />
-
-                {/* Footer with User Info */}
-                <SidebarFooter className="p-3">
-                    <div className="flex items-center gap-3 px-2 py-2 rounded-lg bg-sidebar-accent/50">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold text-sm">
-                            {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{user.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                        </div>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleSignOut}
-                        className="w-full justify-start mt-2 text-muted-foreground hover:text-destructive"
-                    >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Çıkış Yap
-                    </Button>
-                </SidebarFooter>
-            </Sidebar>
+            <AppSidebar user={user} brands={brands} />
 
             <SidebarInset>
                 {/* Top Header Bar */}

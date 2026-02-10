@@ -1,12 +1,12 @@
 "use server";
 
 import { db } from "@/db";
-import { workflows, workflowSteps, brandAssets, mannequinPhotos, contents } from "@/db/schema";
+import { workflows, workflowSteps, brandAssets, mannequinPhotos, mannequins, contents } from "@/db/schema";
 import { FAL_MODELS, fal } from "@/lib/fal";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { ContentGenerationConfig, AspectRatio, VideoDuration } from "@/modules/content/types";
 import { buildWorkflowSteps, WorkflowWithSteps, ImageGenOutput, VideoGenOutput } from "./types";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { uploadImage } from "@/modules/upload/services";
 
@@ -128,12 +128,50 @@ export async function getWorkflow(workflowId: string): Promise<WorkflowWithSteps
         .where(eq(workflowSteps.workflowId, workflowId))
         .orderBy(workflowSteps.stepIndex);
     
+    const config = workflow.config as ContentGenerationConfig;
+    
+    // Fetch reference assets
+    const assets = config.assetIds.length > 0 
+        ? await db.select({
+            id: brandAssets.id,
+            name: brandAssets.name,
+            url: brandAssets.url,
+            category: brandAssets.category,
+        }).from(brandAssets).where(inArray(brandAssets.id, config.assetIds))
+        : [];
+    
+    // Fetch mannequin info
+    let mannequinInfo = null;
+    if (config.mannequinId) {
+        const [mannequin] = await db.select({
+            id: mannequins.id,
+            name: mannequins.name,
+        }).from(mannequins).where(eq(mannequins.id, config.mannequinId));
+        
+        if (mannequin) {
+            const [primaryPhoto] = await db.select({
+                url: mannequinPhotos.url,
+            }).from(mannequinPhotos)
+                .where(eq(mannequinPhotos.mannequinId, mannequin.id))
+                .limit(1);
+            
+            mannequinInfo = {
+                id: mannequin.id,
+                name: mannequin.name,
+                photoUrl: primaryPhoto?.url ?? null,
+            };
+        }
+    }
+    
     return {
         id: workflow.id,
         name: workflow.name,
         status: workflow.status as any,
         autoMode: workflow.autoMode,
         currentStep: workflow.currentStep,
+        config,
+        referenceAssets: assets,
+        mannequinInfo,
         createdAt: workflow.createdAt,
         completedAt: workflow.completedAt,
         steps: steps.map(s => ({

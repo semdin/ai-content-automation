@@ -59,12 +59,28 @@ export function buildWorkflowSteps(config: ContentGenerationConfig): StepDefinit
 }
 
 // Full workflow with steps for frontend
+export interface WorkflowReferenceAsset {
+    id: string;
+    name: string;
+    url: string;
+    category: string;
+}
+
+export interface WorkflowMannequinInfo {
+    id: string;
+    name: string;
+    photoUrl: string | null;
+}
+
 export interface WorkflowWithSteps {
     id: string;
     name: string;
     status: WorkflowStatus;
     autoMode: boolean;
     currentStep: number;
+    config: ContentGenerationConfig;
+    referenceAssets: WorkflowReferenceAsset[];
+    mannequinInfo: WorkflowMannequinInfo | null;
     createdAt: Date;
     completedAt: Date | null;
     steps: {

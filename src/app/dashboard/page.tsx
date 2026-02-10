@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RecentContentGrid } from "./_components/recent-content-grid";
 
 export default async function DashboardPage() {
     const session = await auth.api.getSession({
@@ -158,36 +159,7 @@ export default async function DashboardPage() {
                             </Link>
                         </Button>
                     </div>
-                    <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-                        {recentContents.map((content) => (
-                            <Card key={content.id} className="overflow-hidden group">
-                                <div className="aspect-square relative">
-                                    {content.falVideoUrl ? (
-                                        <video
-                                            src={content.falVideoUrl}
-                                            className="w-full h-full object-cover"
-                                            muted
-                                        />
-                                    ) : content.falImageUrl ? (
-                                        <img
-                                            src={content.falImageUrl}
-                                            alt=""
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                                            <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                                        </div>
-                                    )}
-                                    <div className="absolute top-2 right-2">
-                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
-                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
+                    <RecentContentGrid contents={recentContents} />
                 </div>
             )}
         </div>

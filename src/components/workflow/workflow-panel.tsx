@@ -152,11 +152,11 @@ export function WorkflowPanel({ isOpen, onClose, initialWorkflowId }: WorkflowPa
                         <div 
                             onClick={(e) => e.stopPropagation()}
                             className={cn(
-                                "relative w-full max-w-5xl overflow-hidden rounded-2xl pointer-events-auto",
+                                "relative w-full max-w-7xl overflow-hidden rounded-2xl pointer-events-auto",
                                 "bg-gradient-to-br from-zinc-900/95 via-zinc-900/98 to-zinc-950/95",
                                 "border border-white/10 shadow-2xl shadow-black/50",
                                 "backdrop-blur-xl",
-                                "min-h-[500px] max-h-[80vh]",
+                                "min-h-[500px] max-h-[85vh]",
                                 "flex flex-col"
                             )}
                         >
@@ -197,7 +197,7 @@ export function WorkflowPanel({ isOpen, onClose, initialWorkflowId }: WorkflowPa
                             </div>
 
                             {/* Content */}
-                            <div className="flex-1 overflow-hidden flex flex-col">
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
                                 {selectedWorkflow ? (
                                     <WorkflowDiagram 
                                         workflow={selectedWorkflow} 
